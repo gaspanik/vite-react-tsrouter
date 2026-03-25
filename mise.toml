@@ -1,0 +1,24 @@
+[tasks."vite:dev"]
+description = "Start the development server"
+run = "pnpm dev"
+[tasks."vite:build"]
+confirm = "Are you sure you want to build the project?"
+description = "Build the project"
+run = "pnpm build"
+[tasks."vite:preview"]
+description = "Preview the build"
+run = "pnpm preview"
+depends = ["vite:build"]
+
+[tasks."biome:format"]
+confirm = "Are you sure you want to format the code?"
+description = "Format the codebase using Biome"
+run = "pnpm format ./src"
+[tasks."biome:lint"]
+confirm = "Are you sure you want to lint the code?"
+description = "Lint the codebase using Biome"
+run = "pnpm lint ./src"
+[tasks."biome:check"]
+confirm = "Are you sure you want to format and lint the code?"
+description = "Format and lint the codebase using Biome"
+run = "pnpm check ./src"

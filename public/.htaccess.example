@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # アップロードするフォルダ名に変更
+  # Adjust the folder name to match your upload destination
+  RewriteBase /your-upload-directory-name/
+
+  RewriteRule ^index\.html$ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # index.html に転送して、あとはReact(Router)に任せる
+  # Redirect all requests to index.html and let React Router handle the routing
+  RewriteRule . /your-upload-directory-name/index.html [L]
+</IfModule>
