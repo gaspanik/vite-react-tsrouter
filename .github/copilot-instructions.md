@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Minimal React 19 + TypeScript + Vite 7 + Tailwind CSS 4 starter with TanStack Router and pnpm workspace support.
+Minimal React 19 + TypeScript + Vite 8 + Tailwind CSS 4 starter with TanStack Router and pnpm workspace support.
 
 ## Tech Stack
 
 - **Framework**: React 19.2 (`react-jsx` transform)
-- **Build**: Vite 7 + `@vitejs/plugin-react-swc` (SWC for Fast Refresh)
+- **Build**: Vite 8 + `@vitejs/plugin-react` (Babel for Fast Refresh)
 - **Router**: TanStack Router (file-based routing with auto-generated route tree)
 - **Styling**: Tailwind CSS 4 (via `@tailwindcss/vite`, applied with `@import "tailwindcss"`)
 - **Utilities**: `clsx` + `tailwind-merge` (combined as `cn` function), `class-variance-authority` (for variant APIs), `tailwind-variants` (for slot-based multi-element styling)
@@ -32,7 +32,7 @@ This is a React 19 + TypeScript SPA using file-based routing with TanStack Route
 
 ### Key Architectural Decisions
 
-- **SWC over Babel**: Uses `@vitejs/plugin-react-swc` for faster compilation and HMR
+- **`@vitejs/plugin-react`**: Official Vite React plugin using Babel for Fast Refresh
 - **Tailwind CSS v4**: Uses `@tailwindcss/vite` plugin (not PostCSS). Import with `@import "tailwindcss"` in CSS files
 - **Biome over ESLint/Prettier**: Single tool for linting and formatting with stricter defaults
 - **pnpm**: Required package manager (see `pnpm-lock.yaml`, not `package-lock.json`)

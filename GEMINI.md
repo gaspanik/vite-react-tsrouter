@@ -4,15 +4,15 @@ This file serves as the primary context for AI agents and developers working on 
 
 ## 1. Project Overview
 
-This is a modern Single Page Application (SPA) built with **React 19**, **TypeScript**, and **Vite 7**. It utilizes **TanStack Router** for type-safe, file-based routing and **Tailwind CSS v4** for styling. The project enforces strict code quality using **Biome** and requires **pnpm** for package management.
+This is a modern Single Page Application (SPA) built with **React 19**, **TypeScript**, and **Vite 8**. It utilizes **TanStack Router** for type-safe, file-based routing and **Tailwind CSS v4** for styling. The project enforces strict code quality using **Biome** and requires **pnpm** for package management.
 
 ## 2. Tech Stack
 
 | Technology | Version | Purpose |
 | :--- | :--- | :--- |
 | **React** | 19.2+ | UI Library (using `react-jsx` transform) |
-| **TypeScript** | 5.9+ | Static Typing |
-| **Vite** | 7.x | Build Tool (using `@vitejs/plugin-react-swc`) |
+| **TypeScript** | 6.x | Static Typing |
+| **Vite** | 8.x | Build Tool (using `@vitejs/plugin-react`) |
 | **TanStack Router** | 1.144+ | Type-safe Routing |
 | **Tailwind CSS** | 4.x | Utility-first CSS (via `@tailwindcss/vite`) |
 | **Utilities** | - | `cn` (clsx + tailwind-merge), `class-variance-authority`, `tailwind-variants` |
