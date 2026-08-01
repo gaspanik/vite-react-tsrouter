@@ -1,6 +1,6 @@
 ---
 name: figma-to-tailwind
-description: Reads all Variables from a Figma file URL and writes them as Tailwind CSS v4 @theme tokens into the project's Tailwind CSS entry file (found via grep, or src/index.css if none exists).
+description: Reads all Variables and local Text Styles from a Figma file URL and writes them as Tailwind CSS v4 @theme tokens into the project's Tailwind CSS entry file (found via grep, or src/index.css if none exists).
 argument-hint: <figma-url>
 allowed-tools: mcp__plugin_figma_figma__use_figma, Read, Edit, Bash
 ---
@@ -47,6 +47,50 @@ return result;
 ```
 
 > **Note:** `get_variable_defs` only returns variables already applied to nodes. Always use `use_figma` + Plugin API to retrieve all variables including unused ones.
+
+## Step 2.5: Fetch local text styles
+
+Figma's Variables API only supports single-value types (`COLOR`, `FLOAT`, `STRING`, `BOOLEAN`). Composite typography properties — font weight, line height, letter spacing bundled with a family/size — can't be represented as one variable, so many design systems define a `font/size/*` FLOAT variable for size alone and leave weight/line-height/letter-spacing on a **Text Style** instead. If Step 2 only reads Variables, this information is silently missed.
+
+Fetch local text styles in the same `use_figma` call (or a follow-up one):
+
+```js
+const textStyles = await figma.getLocalTextStylesAsync();
+
+const result = textStyles.map(s => ({
+  id: s.id,
+  name: s.name,
+  fontFamily: s.fontName.family,
+  fontStyle: s.fontName.style,
+  fontSize: s.fontSize,
+  fontWeight: s.fontWeight, // may be undefined depending on the API/version
+  lineHeight: s.lineHeight, // { value, unit: 'PIXELS' | 'PERCENT' } or { unit: 'AUTO' }
+  letterSpacing: s.letterSpacing // { value, unit: 'PIXELS' | 'PERCENT' }
+}));
+
+return result;
+```
+
+> Not every file defines meaningful values on every field (e.g. `lineHeight` is often `AUTO`, `letterSpacing` is often `0`). Only emit a token when the value is present and adds information beyond the Tailwind default — partial coverage is still better than silently dropping the data.
+
+### Converting text style fields to tokens
+
+For each text style, convert the name the same way as variables (slash → kebab-case, e.g. `Heading/Hero` → `heading-hero`), then:
+
+- **`fontWeight`** → `--font-weight-<name>: <weight>;` (utility: `font-<name>`)
+  - If `fontWeight` is not returned by the API, derive it from `fontStyle` via this table: Thin=100, ExtraLight/UltraLight=200, Light=300, Regular/Normal=400, Medium=500, SemiBold/DemiBold=600, Bold=700, ExtraBold/UltraBold=800, Black/Heavy=900. For combined style names like "Display ExtraLight", match the weight keyword (ExtraLight=200) and ignore the prefix.
+- **`lineHeight`** → `--leading-<name>: <ratio>;` (utility: `leading-<name>`)
+  - `unit: 'PERCENT'` → `value / 100` (e.g. 150 → `1.5`)
+  - `unit: 'PIXELS'` → `value / fontSize` (unitless ratio, matches Tailwind's `leading-*` convention)
+  - `unit: 'AUTO'` → skip (no token needed; browser default is fine)
+- **`letterSpacing`** → `--tracking-<name>: <em>em;` (utility: `tracking-<name>`)
+  - `unit: 'PERCENT'` → `value / 100` em (percent-of-font-size already equals the em value)
+  - `unit: 'PIXELS'` → `value / fontSize` em
+  - Skip if the resulting value rounds to `0`
+- **`fontFamily`** → only emit `--font-<name>: "<fontFamily>", <fallback>;` if no matching `font/family/*` STRING variable was already found in Step 2 for this family. If a variable already covers it, skip to avoid duplicating the same font stack under two token names.
+- **`fontSize`** → skip; this is already covered by `font/size/*` FLOAT variables in the common case. Only fall back to emitting `--text-<name>` here if Step 2 found zero font-size variables at all (i.e. sizes live only on text styles, not variables).
+
+Do not attempt to deduplicate weight/leading/tracking values that happen to be identical across multiple text styles — keep one token per style name. The goal is not losing information, not building a minimal/normalized scale; consolidation is a judgment call for whoever reviews the output afterward.
 
 ## Step 3: Map variables to CSS custom properties
 
@@ -153,6 +197,11 @@ Separate sections by collection/group with comments:
 
   /* Font Weight (primitives/font/weight) */
   --font-weight-bold: 700;
+
+  /* Text Styles: weight/leading/tracking not covered by Variables (Step 2.5) */
+  --font-weight-heading-hero: 300;
+  --leading-heading-hero: 1;
+  --tracking-heading-hero: -0.01em;
 }
 ```
 
@@ -160,6 +209,7 @@ Separate sections by collection/group with comments:
 
 Report the following:
 - Number of collections and total variables imported
+- Number of local text styles found, and how many weight/leading/tracking tokens were derived from them (Step 2.5)
 - List of added/updated CSS custom properties (count per group)
 - Mode name used (if multiple modes were present)
 - Path to the output CSS file
@@ -167,6 +217,6 @@ Report the following:
 ## Error handling
 
 - If fileKey cannot be extracted from the URL: ask the user to provide a valid Figma design file URL
-- If 0 variables are found: report that the file has no Variables defined
+- If 0 variables and 0 text styles are found: report that the file has no Variables or Text Styles defined
 - If no CSS file with `@import "tailwindcss"` is found: warn the user that Tailwind CSS v4 does not appear to be set up in this project, and ask them to provide the output path
 - If `use_figma` returns an error: check the error message before retrying (the operation is atomic — no partial writes occur)
