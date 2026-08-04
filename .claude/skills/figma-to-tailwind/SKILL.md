@@ -133,6 +133,35 @@ Convert Figma variable names (slash-separated) to kebab-case:
 
 - If a collection has multiple modes (light/dark, etc.), use the value from the **`defaultModeId`** mode
 
+## Step 3.5: Check for collisions with Tailwind's reserved namespaces
+
+**Do this before writing anything.** Tailwind v4 reads `@theme` by literal key match — a generated name that happens to match one of Tailwind's own reserved patterns silently overrides real Tailwind behavior *project-wide*, not just in the file this skill touches. This has caused real breakage (an entire page's spacing collapsing/inflating, default gray shades silently replaced) — always run both checks below on every generated property name before Step 4.
+
+**Class 1 — Spacing/sizing scale collision (`--spacing-<N>`)**
+
+Tailwind v4 computes every numeric spacing/sizing utility (`p-*`, `m-*`, `gap-*`, `w-*`, `h-*`, `size-*`, `inset-*`, `top-*`, `text-*` line-height shorthand, …) as `calc(var(--spacing) * N)` — **unless** a literal `--spacing-<N>` key exists in `@theme`, in which case that value wins for *every* utility using that number, everywhere in the project, not just spacing-labeled ones.
+
+**Any `--spacing-<N>` where `<N>` is a bare integer or decimal is a *naming* collision by construction** — but whether it's a *problem* depends on whether the value also matches. A Figma spacing variable named by its raw px value (e.g. `spacing/16` = 16px) and Tailwind's multiplier-based utility number (`p-16` = 16 × the base unit) only mean the same thing when Figma's px value happens to equal `N × base unit`. So check the value before deciding what to do:
+
+1. Find the project's effective spacing base unit: look for a `--spacing:` override in the target CSS file's `@theme` block; if absent, Tailwind v4's default is `0.25rem` (4px).
+2. Compute what Tailwind's default scale already produces for this exact key: `default_value = N × base_unit`.
+3. Compare to the Figma-derived value (in the same unit, allow for rounding):
+   - **Identical** → the Figma value already matches Tailwind's own scale at that number. **Do not write this token at all** — writing an identical override adds noise for no benefit, since the plain utility (`p-16`, `gap-16`, …) already produces the correct value with zero setup. Note it in the report as "skipped — already matches Tailwind's default spacing scale."
+   - **Different** (the common case — this is what caused a real production break: a `spacing/120` = 120px Figma token colliding with `--spacing-120`, which Tailwind's default scale already means 480px) → rename to avoid silently overriding the utility project-wide: `--spacing-<N>` → `--spacing-fig-<N>` (utilities become `p-fig-4`, `gap-fig-16`, etc. — still readable, zero collision risk). If the collection name gives a more specific, meaningful disambiguator, prefer that instead (e.g. `--spacing-card-16`).
+
+**Class 2 — Default color palette collision (`--color-<family>-<step>`)**
+
+Tailwind v4 ships a default palette under these family names, each with steps `50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950`:
+`slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose`.
+
+If a generated `--color-<name>` splits (on the last hyphen) into a `<family>` from that list **and** a `<step>` from that list — e.g. `--color-neutral-100`, `--color-gray-400` — it silently overrides that one built-in step project-wide, including in files this skill never touched. This is especially easy to trigger because Figma design systems commonly use exactly these words (`neutral`, `gray`, `slate`, …) as semantic color-group names.
+
+Rename only the entries that actually collide (family **and** step both match a Tailwind default): insert a disambiguator before the step, e.g. `--color-neutral-100` → `--color-neutral-fig-100`. Leave non-colliding names alone — e.g. `--color-neutral-110` (110 isn't a standard step) or `--color-brand-primary` (brand isn't a default family) need no change.
+
+Same principle as Class 1 applies in theory (if the Figma color happens to be pixel-identical to Tailwind's default at that family+step, overriding is a harmless no-op) — but skip the value-comparison here: Tailwind's defaults are defined in OKLCH and Figma colors arrive as sRGB, so an exact match is both expensive to verify and astronomically unlikely to occur by coincidence. Treat every family+step match as needing a rename.
+
+**Reporting:** collect every renamed token (old name → new name, and why) — this feeds into the Step 5 report so the user can see what changed.
+
 ## Step 4: Write to the Tailwind CSS entry file
 
 ### Find the output file
@@ -211,6 +240,7 @@ Report the following:
 - Number of collections and total variables imported
 - Number of local text styles found, and how many weight/leading/tracking tokens were derived from them (Step 2.5)
 - List of added/updated CSS custom properties (count per group)
+- **Tokens affected by a Tailwind reserved-namespace collision check (Step 3.5)**: split into two lists — renamed (old name → new name, and which class it was) and skipped (value already matched Tailwind's default scale, so no token was written), or "none" if nothing collided
 - Mode name used (if multiple modes were present)
 - Path to the output CSS file
 
