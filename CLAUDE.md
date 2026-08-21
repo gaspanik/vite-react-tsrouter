@@ -55,6 +55,10 @@ Place images in `src/assets/images/` with descriptive filenames (e.g. `hero-bann
 
 `getImage()` resolves the extension automatically (`jpg/jpeg/png/webp/svg`) and returns `''` with a dev-mode console warning if the image is missing. See `src/lib/image.ts` for details.
 
+## Typography
+
+`src/index.css` sets **Gen Interface JP** as the default typeface (`--default-font-family` / `--heading-font-family`, loaded via CDN link in `index.html`). Treat this as the starter's placeholder, not a fixed choice — swap it whenever the prompt names a different typeface, or a referenced Figma design specifies its own fonts. See the README's "Default Typeface" section for the two files to edit.
+
 ## Design System
 
 If `DESIGN.md` exists in the project root, read it before implementing any UI change — it defines the design tokens (colors, typography, spacing, radius) and component guidelines.
